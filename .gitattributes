@@ -1,0 +1,9 @@
+# 统一换行符，避免 Windows 克隆后 .sh 变成 CRLF 无法执行
+* text=auto
+*.sh text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
