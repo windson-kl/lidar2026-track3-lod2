@@ -6,7 +6,7 @@ This repository is the complete, self-contained code that generates our competit
 submissions. It is released under **CC BY 4.0** (see `LICENSE`), as required by the
 competition's award conditions.
 
-本仓库是生成我们参赛提交结果的**完整可复现代码**，按赛事要求以 **CC BY 4.0** 发布。
+本仓库是生成参赛提交结果的**完整可复现代码**，按赛事要求以 **CC BY 4.0** 发布。
 
 ---
 

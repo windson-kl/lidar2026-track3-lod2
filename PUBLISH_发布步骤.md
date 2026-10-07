@@ -62,7 +62,7 @@ release_ccby4/
 
 **特意没有打包的东西**（见 README §3.3）：
 官方评测脚本 `official_evaluate.py`、BuildingWorld 数据集、4000 个测试点云与产物网格、
-City3D 本体 —— 这些要么是组织方的、要么是第三方的，不应由我们再分发。
+City3D 本体 —— 这些要么是组织方的、要么是第三方的，不应再分发。
 
 ---
 
@@ -85,7 +85,7 @@ curl -s -o /dev/null -w '%{http_code}\n' --max-time 15 https://huggingface.co
 
 打开 https://huggingface.co/settings/tokens → **New token** → Type 选 **Write** → 复制 `hf_...`。
 
-> 注意：我们提交评测用的那个会话 Cookie 里的 `hf_oauth_...` 只有 `read-repos`，**不能建仓库、不能推送**。
+> 注意：提交评测所用的会话 Cookie 里的 `hf_oauth_...` 只有 `read-repos`，**不能建仓库、不能推送**。
 
 ### 第 3 步：发布（二选一）
 
