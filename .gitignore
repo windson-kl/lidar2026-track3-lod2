@@ -1,0 +1,23 @@
+# ---- 本地/临时 ----
+tmp/
+__pycache__/
+*.pyc
+*.pyo
+
+# ---- 数据与产物（不应分发，见 README §3.3）----
+data/
+out/
+logs/
+backup/
+wheels/
+
+# ---- 第三方与评测脚本（由组织方/第三方提供）----
+city3d/
+official_evaluate.py
+
+# ---- 环境 ----
+.venv/
+venv/
+.env
+*.cookie
+.hf_cookie
