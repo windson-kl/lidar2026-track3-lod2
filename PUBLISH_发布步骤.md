@@ -137,28 +137,36 @@ bash release_ccby4/push_gitee.sh        # 默认仓库名 lidar2026-track3-lod2
 
 ## 方案 B：发到 GitHub（需 VPN）
 
-仓库已在本地 `release_ccby4/` 初始化完毕（`main` / commit `d96d828` / 42 files），
-只差建立远端并推送。**注意：GitHub 当前直连 000，本方案同样需要先开 VPN。**
+**前置**：GitHub 需 VPN。本机 VPN 下实测：`api.github.com` 200(1.1s)、
+`github.com` 200(8s)、`git ls-remote https://github.com/git/git.git HEAD` **成功返回 HEAD** ⇒ git 通道可用。
 
-**第一步（你来做）**：打开 https://github.com/new 建一个 **Public** 仓库，
-名字建议 `lidar2026-track3-lod2`，**不要**勾选 "Add a README / .gitignore / license"
-（本地已全部具备）。
+**第 1 步：建 PAT**
+https://github.com/settings/tokens →
+- 省事：**Classic** token，勾 `repo`（可自动建仓库 + 推送）；
+- 或 **Fine-grained**：`Contents: Read and write` + `Administration: Read and write`。
 
-**第二步（二选一）**：
-
-**B1（推荐）** —— 给我一个 fine-grained PAT：
-Settings → Developer settings → Personal access tokens → **Fine-grained tokens**，
-权限勾 `Contents: Read and write`（+ `Administration: Read and write` 以便我直接建仓库）。
-我拿到后负责：建仓库 → 推送 → 返回公开 URL → 把 URL 写进两篇文档。
-
-**B2（你自己来）** —— 在 `D:\LiDAR2026\release_ccby4` 下执行：
+**第 2 步：一键发布**
 
 ```bash
-git remote add origin https://github.com/<你的用户名>/lidar2026-track3-lod2.git
-git push -u origin main
+cd /d/LiDAR2026
+export GITHUB_USER=你的GitHub用户名
+export GITHUB_TOKEN=ghp_xxxxxxxx        # 第 1 步的 PAT
+bash release_ccby4/push_github.sh       # 默认仓库名 lidar2026-track3-lod2
 ```
 
-（若提示登录，用户名填 GitHub 用户名，密码填 **PAT**。）
+`push_github.sh` 会：查连通性 → 校验 token → 通过 API **自动创建公开仓库**（已存在则跳过）
+→ `git push` → 打印公开地址。token 不会写进 `.git/config`。
+
+**第 3 步**：公开地址形如 `https://github.com/<用户名>/lidar2026-track3-lod2`，
+替换进两处 `<CODE_URL_PLACEHOLDER>`。
+
+> 也可用**纯手动**方式（不用脚本）：
+> ```bash
+> cd /d/LiDAR2026/release_ccby4
+> git remote add origin https://github.com/<用户名>/lidar2026-track3-lod2.git
+> git push -u origin main      # 提示登录时：用户名填 GitHub 用户名，密码填 PAT
+> ```
+> 需先在 https://github.com/new 建好 Public 仓库（**不要**勾 Add README/.gitignore/license）。
 
 ---
 
