@@ -9,9 +9,24 @@
 
 前两条已完成，并已于 **2026-10-07** 更新至当前最佳方案 v37
 （`docs/赛道三_方法说明文档.md`、`docs/赛道三_扩展摘要_4页.md`）。
-**第三条（代码发布）已经准备好，只差最后一次推送**：
-本目录已初始化为 git 仓库并完成首个提交（分支 `main`、42 个文件、commit `d96d828`），
-仅缺一个**有写权限的凭据**把提交推到公网。
+
+> ### ✅ 第三条（代码发布）已于 2026-10-07 18:40 完成
+>
+> **公开仓库：https://github.com/windson-kl/lidar2026-track3-lod2**
+> （公开 · CC-BY-4.0 · 46 文件 · commit `2c845fef`）
+>
+> 该 URL 已写入 `docs/赛道三_方法说明文档.md`（§10 及 §1 合规表）与
+> `docs/赛道三_扩展摘要_4页.md`（§2 数据与合规性），并已同步进公开仓库。
+>
+> **剩余动作**：把该 URL 随方法说明 + 扩展摘要一并提交给组织者
+> （`lidar2026@126.com` 或平台补充渠道）。
+>
+> **踩坑记录（供未来复用）**：GitHub 新版 UI 默认落在 **Fine-grained tokens** 页，
+> 连续两次在该页生成的令牌都缺 `Administration`/`Contents` 权限，
+> `POST /user/repos` 直接 403。**改用 Classic 令牌 + `repo` scope 一次即通**。
+> 推送当晚 `github.com:443` 被网络阻断（`api.github.com` 仍可达），
+> 最终用 **Git Data API**（blobs → tree → commit → 更新 ref）完成了等价推送，
+> 并通过精确复现 commit 元数据使远端 SHA 与本地一致。
 
 > **网络实测（2026-10-07 晚复测）**：境外托管站**全部 000 不可达** ——
 > `huggingface.co` 000、`github.com` 000、`raw.githubusercontent.com` 000（早先 github 曾 200，现已不可达）。
@@ -211,8 +226,8 @@ bash release_ccby4/push_github.sh
 
 ## 待办勾选
 
-- [ ] **无 VPN** → 建 Gitee 私人令牌，执行方案 C
-- [ ] **有 VPN** → 建 HF `write` token（方案 A）或 GitHub PAT（方案 B）
-- [ ] 执行所选方案，拿到公开 URL
-- [ ] 把 URL 写进方法说明文档与扩展摘要（替换 `<CODE_URL_PLACEHOLDER>`）
-- [ ] 在竞赛平台/邮件里补交代码地址
+- [x] **有 VPN** → 用 Classic 令牌（scope `repo`）→ 方案 B 执行完毕
+- [x] 执行方案，拿到公开 URL：**https://github.com/windson-kl/lidar2026-track3-lod2**
+- [x] 把 URL 写进方法说明文档与扩展摘要（替换 `<CODE_URL_PLACEHOLDER>`）
+- [ ] **在竞赛平台/邮件里补交代码地址**（发 `lidar2026@126.com`）← 唯一剩余动作
+- [ ] 收尾后删除本地凭据文件 `D:/LiDAR2026/tmp/.gh_token` 与 `.gh_user`
