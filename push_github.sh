@@ -6,10 +6,17 @@
 # 特点：**需要 VPN**（本机实测 github.com 直连 000；VPN 下 200 / 8s，
 #       git 通道实测 `git ls-remote` 可用）。
 #
-# 用法：
-#   export GITHUB_USER=yourname            # GitHub 用户名
-#   export GITHUB_TOKEN=ghp_xxxx           # PAT（凭据）
-#   bash release_ccby4/push_github.sh [仓库名]
+# 用法（二选一）：
+#   A) 环境变量：
+#      export GITHUB_USER=yourname
+#      export GITHUB_TOKEN=ghp_xxxx
+#      bash release_ccby4/push_github.sh [仓库名]
+#
+#   B) 凭据文件（推荐，token 不进命令行/不留在 history）：
+#      把用户名写进 D:/LiDAR2026/tmp/.gh_user    （一行）
+#      把 PAT  写进 D:/LiDAR2026/tmp/.gh_token   （一行）
+#      bash release_ccby4/push_github.sh [仓库名]
+#      脚本会自动读这两个文件；文件已被 .gitignore 忽略，绝不会被推送。
 #
 # 令牌建议：
 #   - Classic PAT，权限勾 `repo`（可自动建仓 + 推送）—— 最省事
@@ -20,8 +27,20 @@
 # ============================================================================
 set -euo pipefail
 
-GITHUB_USER="${GITHUB_USER:?[ERR] 请先 export GITHUB_USER=<你的 GitHub 用户名>}"
-GITHUB_TOKEN="${GITHUB_TOKEN:?[ERR] 请先 export GITHUB_TOKEN=<PAT，见 github.com/settings/tokens>}"
+_here="$(cd "$(dirname "$0")" && pwd)"
+_root="$(cd "$_here/.." && pwd)"
+
+# 从文件兜底读取凭据（取第一个非空行）
+_read_first() { [ -f "$1" ] && awk 'NF{print; exit}' "$1" 2>/dev/null || true; }
+
+GITHUB_USER="${GITHUB_USER:-$(_read_first "$_root/tmp/.gh_user")}"
+GITHUB_USER="${GITHUB_USER:-$(_read_first "$_here/tmp/.gh_user")}"
+GITHUB_USER="${GITHUB_USER:?[ERR] 请 export GITHUB_USER=<用户名>，或写入 D:/LiDAR2026/tmp/.gh_user}"
+
+GITHUB_TOKEN="${GITHUB_TOKEN:-$(_read_first "$_root/tmp/.gh_token")}"
+GITHUB_TOKEN="${GITHUB_TOKEN:-$(_read_first "$_here/tmp/.gh_token")}"
+GITHUB_TOKEN="${GITHUB_TOKEN:?[ERR] 请 export GITHUB_TOKEN=<PAT>，或写入 D:/LiDAR2026/tmp/.gh_token}"
+
 REPO="${1:-lidar2026-track3-lod2}"
 
 cd "$(dirname "$0")"

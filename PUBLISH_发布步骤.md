@@ -145,7 +145,9 @@ https://github.com/settings/tokens →
 - 省事：**Classic** token，勾 `repo`（可自动建仓库 + 推送）；
 - 或 **Fine-grained**：`Contents: Read and write` + `Administration: Read and write`。
 
-**第 2 步：一键发布**
+**第 2 步：一键发布**（二选一）
+
+*2a — 环境变量*
 
 ```bash
 cd /d/LiDAR2026
@@ -153,6 +155,16 @@ export GITHUB_USER=你的GitHub用户名
 export GITHUB_TOKEN=ghp_xxxxxxxx        # 第 1 步的 PAT
 bash release_ccby4/push_github.sh       # 默认仓库名 lidar2026-track3-lod2
 ```
+
+*2b — 凭据文件（token 不进命令行、不留 history）*
+
+```bash
+printf '%s\n' '你的GitHub用户名' > D:/LiDAR2026/tmp/.gh_user
+printf '%s\n' 'ghp_xxxxxxxx'      > D:/LiDAR2026/tmp/.gh_token
+bash release_ccby4/push_github.sh
+```
+
+> `D:/LiDAR2026/tmp/` **在仓库之外**且已被 `.gitignore` 忽略，凭据绝不会被推送到公网。
 
 `push_github.sh` 会：查连通性 → 校验 token → 通过 API **自动创建公开仓库**（已存在则跳过）
 → `git push` → 打印公开地址。token 不会写进 `.git/config`。

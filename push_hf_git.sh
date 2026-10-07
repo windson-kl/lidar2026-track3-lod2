@@ -16,8 +16,18 @@
 # ============================================================================
 set -euo pipefail
 
-HF_USER="${HF_USER:?[ERR] 请先 export HF_USER=<你的 HF 用户名>}"
-HF_TOKEN="${HF_TOKEN:?[ERR] 请先 export HF_TOKEN=<write token，见 huggingface.co/settings/tokens>}"
+_here="$(cd "$(dirname "$0")" && pwd)"
+_root="$(cd "$_here/.." && pwd)"
+_read_first() { [ -f "$1" ] && awk 'NF{print; exit}' "$1" 2>/dev/null || true; }
+
+HF_USER="${HF_USER:-$(_read_first "$_root/tmp/.hf_user")}"
+HF_USER="${HF_USER:-$(_read_first "$_here/tmp/.hf_user")}"
+HF_USER="${HF_USER:?[ERR] 请 export HF_USER=<你的 HF 用户名>，或写入 D:/LiDAR2026/tmp/.hf_user}"
+
+HF_TOKEN="${HF_TOKEN:-$(_read_first "$_root/tmp/.hf_write_token")}"
+HF_TOKEN="${HF_TOKEN:-$(_read_first "$_here/tmp/.hf_write_token")}"
+HF_TOKEN="${HF_TOKEN:?[ERR] 请 export HF_TOKEN=<write token>，或写入 D:/LiDAR2026/tmp/.hf_write_token}"
+
 REPO="${1:-lidar2026-track3-lod2}"
 
 cd "$(dirname "$0")"

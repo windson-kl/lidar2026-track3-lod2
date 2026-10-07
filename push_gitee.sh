@@ -17,8 +17,18 @@
 # ============================================================================
 set -euo pipefail
 
-GITEE_USER="${GITEE_USER:?[ERR] 请先 export GITEE_USER=<你的 Gitee 用户名>}"
-GITEE_TOKEN="${GITEE_TOKEN:?[ERR] 请先 export GITEE_TOKEN=<私人令牌，见 gitee.com/profile/personal_access_tokens>}"
+_here="$(cd "$(dirname "$0")" && pwd)"
+_root="$(cd "$_here/.." && pwd)"
+_read_first() { [ -f "$1" ] && awk 'NF{print; exit}' "$1" 2>/dev/null || true; }
+
+GITEE_USER="${GITEE_USER:-$(_read_first "$_root/tmp/.gitee_user")}"
+GITEE_USER="${GITEE_USER:-$(_read_first "$_here/tmp/.gitee_user")}"
+GITEE_USER="${GITEE_USER:?[ERR] 请 export GITEE_USER=<你的 Gitee 用户名>，或写入 D:/LiDAR2026/tmp/.gitee_user}"
+
+GITEE_TOKEN="${GITEE_TOKEN:-$(_read_first "$_root/tmp/.gitee_token")}"
+GITEE_TOKEN="${GITEE_TOKEN:-$(_read_first "$_here/tmp/.gitee_token")}"
+GITEE_TOKEN="${GITEE_TOKEN:?[ERR] 请 export GITEE_TOKEN=<私人令牌>，或写入 D:/LiDAR2026/tmp/.gitee_token}"
+
 REPO="${1:-lidar2026-track3-lod2}"
 
 cd "$(dirname "$0")"

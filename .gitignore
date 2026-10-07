@@ -21,3 +21,11 @@ venv/
 .env
 *.cookie
 .hf_cookie
+
+# ---- 凭据（绝不入库）----
+.gh_token
+.gh_user
+.gitee_token
+.gitee_user
+*.secret
+credentials.json
