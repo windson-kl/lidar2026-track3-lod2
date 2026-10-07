@@ -141,9 +141,20 @@ bash release_ccby4/push_gitee.sh        # 默认仓库名 lidar2026-track3-lod2
 `github.com` 200(8s)、`git ls-remote https://github.com/git/git.git HEAD` **成功返回 HEAD** ⇒ git 通道可用。
 
 **第 1 步：建 PAT**
-https://github.com/settings/tokens →
-- 省事：**Classic** token，勾 `repo`（可自动建仓库 + 推送）；
-- 或 **Fine-grained**：`Contents: Read and write` + `Administration: Read and write`。
+
+https://github.com/settings/tokens → **Generate new token (classic)** → Scope 勾 **`repo`**
+（`repo` 同时覆盖"建公开仓库 + 推送"，最省事，推荐）。
+
+> **实测坑（2026-10-07）**：**Fine-grained PAT 默认权限不足以建仓库**。
+> 用 `windson-kl` 的 fine-grained token 测试：`GET /user` 正常（200），但
+> `POST /user/repos` 返回 **403 `Resource not accessible by personal access token`**，
+> 且 `GET /user/repos` 返回 **`[]`**（没有任何仓库访问权）。
+> ⇒ 若坚持用 fine-grained，必须改三处：
+> ① Repository access 选 **All repositories**；
+> ② Permissions → Repository permissions → **Administration: Read and write**（建仓必需）；
+> ③ **Contents: Read and write**（推送必需）。
+> 改权限比换 token 麻烦，**建议直接用 Classic `repo`**。
+> 另注：Classic token 生成入口是 https://github.com/settings/tokens/new （不带 `?type=beta`）。
 
 **第 2 步：一键发布**（二选一）
 
