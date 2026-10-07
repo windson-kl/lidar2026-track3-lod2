@@ -140,21 +140,31 @@ bash release_ccby4/push_gitee.sh        # 默认仓库名 lidar2026-track3-lod2
 **前置**：GitHub 需 VPN。本机 VPN 下实测：`api.github.com` 200(1.1s)、
 `github.com` 200(8s)、`git ls-remote https://github.com/git/git.git HEAD` **成功返回 HEAD** ⇒ git 通道可用。
 
-**第 1 步：建 PAT**
+**第 1 步：建 PAT（⭐ 直接用下面这条链接，30 秒搞定）**
 
-https://github.com/settings/tokens → **Generate new token (classic)** → Scope 勾 **`repo`**
-（`repo` 同时覆盖"建公开仓库 + 推送"，最省事，推荐）。
+**推荐——Classic 令牌，scope 已预勾：**
 
-> **实测坑（2026-10-07）**：**Fine-grained PAT 默认权限不足以建仓库**。
+```
+https://github.com/settings/tokens/new?scopes=repo&description=lidar2026-track3
+```
+
+打开后直接点页面底部 **Generate token**，复制 `ghp_...` 即可（`repo` 会自动勾上，
+一步同时覆盖"建公开仓库 + 推送"）。
+
+> ⚠️ **必须走 Classic 页**。GitHub 新版默认把 `/settings/tokens` 落在
+> **Fine-grained tokens** 标签上，左侧要点 **Tokens (classic)** 才进得去。
+
+> **实测坑（2026-10-07，连续两个 fine-grained token 都栽在这里）**：
 > 用 `windson-kl` 的 fine-grained token 测试：`GET /user` 正常（200），但
 > `POST /user/repos` 返回 **403 `Resource not accessible by personal access token`**，
-> 且 `GET /user/repos` 返回 **`[]`**（没有任何仓库访问权）。
-> ⇒ 若坚持用 fine-grained，必须改三处：
+> 且 `GET /user/repos` 返回 **`[]`**。**两个不同的 fine-grained token 症状完全一致**，
+> 说明问题不在令牌新旧，而在**建令牌时漏勾权限**。
+>
+> 若坚持用 fine-grained，必须**同时**改三处（缺一不可）：
 > ① Repository access 选 **All repositories**；
 > ② Permissions → Repository permissions → **Administration: Read and write**（建仓必需）；
-> ③ **Contents: Read and write**（推送必需）。
-> 改权限比换 token 麻烦，**建议直接用 Classic `repo`**。
-> 另注：Classic token 生成入口是 https://github.com/settings/tokens/new （不带 `?type=beta`）。
+> ③ Permissions → Repository permissions → **Contents: Read and write**（推送必需）。
+> 改权限比换令牌麻烦，**建议直接用上面的 Classic 链接**。
 
 **第 2 步：一键发布**（二选一）
 
