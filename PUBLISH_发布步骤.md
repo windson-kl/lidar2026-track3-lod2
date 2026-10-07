@@ -13,8 +13,13 @@
 本目录已初始化为 git 仓库并完成首个提交（分支 `main`、42 个文件、commit `d96d828`），
 仅缺一个**有写权限的凭据**把提交推到公网。
 
-> **为什么选 GitHub 而不是 HF**：本机 **`huggingface.co` 直连被墙**（curl 返回 000，需 VPN），
-> 而 **`github.com` 可达**（返回 200）。因此方案 B 比方案 A 更现实，推荐 B。
+> **网络实测（2026-10-07 晚复测）**：境外托管站**全部 000 不可达** ——
+> `huggingface.co` 000、`github.com` 000、`raw.githubusercontent.com` 000（早先 github 曾 200，现已不可达）。
+> 国内托管站**全部可达** —— `gitee.com` 200(1.5s)、`gitcode.com` 200、`atomgit.com` 200；
+> 评测平台 `buildingworld-...hf.space` 200、`pypi.tuna.tsinghua.edu.cn` 200。
+>
+> **结论**：→ 无 VPN 时走 **方案 C（Gitee）**；有 VPN 时 HF（方案 A）与 GitHub（方案 B）均可。
+> 官方只要求"代码以 CC BY 4.0 公开发布"，**未限定平台**，Gitee 公开仓库完全满足。
 
 发布前已完成的一次密钥扫描：包内**无任何 Cookie / token / 密码**，
 `submit_space.py` 仅从 `tmp/.hf_cookie` 或环境变量读取凭据，可安全公开。
@@ -46,24 +51,94 @@ City3D 本体 —— 这些要么是组织方的、要么是第三方的，不�
 
 ---
 
-## 方案 A：发到 Hugging Face（推荐，与赛事同平台）
+## 方案 A：发到 Hugging Face（与赛事同平台）
 
-需要一个**有写权限**的 token（`hf_oauth_...` 的会话 token 只有 `read-repos`，不能建仓库）。
-在 https://huggingface.co/settings/tokens 建一个 `write` token，然后：
+> ⚠️ **前提：必须先开 VPN。** 本机实测 `huggingface.co` 直连返回 **000（被墙）**，
+> 而 `hf-mirror.com` 虽可达（200）但**只做下载加速、不支持上传**（`/api/models/*` 会 307 跳回主站）。
+> 因此从国内网络发布到 HF，**没有 VPN 就走不通**。没有 VPN 请直接用方案 B（GitHub）。
+
+本地仓库已就绪（`main` / 42 files / commit `d96d828`），**不需要重新建仓**，只差推送。
+
+### 第 1 步：开 VPN，确认能通
 
 ```bash
-pip install -U huggingface_hub
-export HF_TOKEN=hf_xxxxxxxxxxxxxxxx
-python release_ccby4/push_hf.py --repo <你的用户名>/lidar2026-track3-lod2 --token $HF_TOKEN
+curl -s -o /dev/null -w '%{http_code}\n' --max-time 15 https://huggingface.co
+# 期望：200 或 307。仍是 000 说明 VPN 没生效。
 ```
 
-`push_hf.py` 会自动：建公开仓库 → 上传 LICENSE/README/src/docs →
-打上 `license: cc-by-4.0` 标签 → 打印可引用的仓库地址。
+### 第 2 步：建一个 **write** 权限的 token
 
-## 方案 B：发到 GitHub（**当前推荐**）
+打开 https://huggingface.co/settings/tokens → **New token** → Type 选 **Write** → 复制 `hf_...`。
+
+> 注意：我们提交评测用的那个会话 Cookie 里的 `hf_oauth_...` 只有 `read-repos`，**不能建仓库、不能推送**。
+
+### 第 3 步：发布（二选一）
+
+**A1（推荐，零依赖，只用 git）**
+
+```bash
+cd /d/LiDAR2026
+export HF_USER=wind20011911          # 你的 HF 用户名
+export HF_TOKEN=hf_xxxxxxxxxxxx      # 第 2 步的 write token
+bash release_ccby4/push_hf_git.sh     # 默认仓库名 lidar2026-track3-lod2
+```
+
+`push_hf_git.sh` 会：查连通性 → 校验 token → `git push`（首次推送**自动创建公开仓库**）→ 打印公开地址。
+token **不会**写进 `.git/config`（脚本刻意不用 `git remote add`，走一次性 URL）。
+
+**A2（用 huggingface_hub，需先装依赖）**
+
+```bash
+# pip 源可达（实测 pypi 200），不需要 VPN 也能装
+D:/Python39/python.exe -m pip install -U huggingface_hub \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple
+export HF_TOKEN=hf_xxxxxxxxxxxx
+D:/Python39/python.exe -u release_ccby4/push_hf.py \
+    --repo wind20011911/lidar2026-track3-lod2
+```
+
+### 第 4 步：拿到地址后收尾
+
+公开地址形如 `https://huggingface.co/<用户名>/lidar2026-track3-lod2`。
+把它替换进这两处的 `<CODE_URL_PLACEHOLDER>`：
+
+- `docs/赛道三_方法说明文档.md`（§10 许可与数据来源）
+- `docs/赛道三_扩展摘要_4页.md`（§2 数据与合规性 或 §7 结论处）
+
+然后在竞赛平台/邮件中补交该地址。
+
+## 方案 C：发到 Gitee 码云（**无 VPN 时推荐**）
+
+国内直连可用（gitee.com 200 / 1.5s），**不需要 VPN**，公开仓库对境外同样可访问。
+
+**第 1 步**：登录 https://gitee.com → 右上角头像 → **设置** → **私人令牌**（https://gitee.com/profile/personal_access_tokens）
+→ **生成新令牌** → 权限至少勾 **`projects`**（仓库读写）→ 复制令牌。
+
+**第 2 步**：一键发布
+
+```bash
+cd /d/LiDAR2026
+export GITEE_USER=wind20011911          # 你的 Gitee 登录名（不是昵称）
+export GITEE_TOKEN=你的私人令牌
+bash release_ccby4/push_gitee.sh        # 默认仓库名 lidar2026-track3-lod2
+```
+
+`push_gitee.sh` 会：查连通性 → 校验令牌 → 通过 API **自动创建公开仓库**（已存在则跳过）
+→ `git push` → 打印公开地址。token 不会写进 `.git/config`。
+
+**第 3 步**：公开地址形如 `https://gitee.com/<用户名>/lidar2026-track3-lod2`，
+替换进两处 `<CODE_URL_PLACEHOLDER>`（见文末"第 4 步"）。
+
+> 也可用 **手动**方式：在 https://gitee.com/projects/new 建一个公开仓库（不勾初始化），然后
+> `git remote add origin https://gitee.com/<用户名>/lidar2026-track3-lod2.git && git push -u origin main`，
+> 弹窗时用户名填 Gitee 用户名、密码填私人令牌。
+
+---
+
+## 方案 B：发到 GitHub（需 VPN）
 
 仓库已在本地 `release_ccby4/` 初始化完毕（`main` / commit `d96d828` / 42 files），
-只差建立远端并推送。
+只差建立远端并推送。**注意：GitHub 当前直连 000，本方案同样需要先开 VPN。**
 
 **第一步（你来做）**：打开 https://github.com/new 建一个 **Public** 仓库，
 名字建议 `lidar2026-track3-lod2`，**不要**勾选 "Add a README / .gitignore / license"
@@ -95,7 +170,8 @@ git push -u origin main
 
 ## 待办勾选
 
-- [ ] 建 HF `write` token 或登录 GitHub
-- [ ] 执行方案 A 或 B，拿到公开 URL
-- [ ] 把 URL 写进方法说明文档与扩展摘要
+- [ ] **无 VPN** → 建 Gitee 私人令牌，执行方案 C
+- [ ] **有 VPN** → 建 HF `write` token（方案 A）或 GitHub PAT（方案 B）
+- [ ] 执行所选方案，拿到公开 URL
+- [ ] 把 URL 写进方法说明文档与扩展摘要（替换 `<CODE_URL_PLACEHOLDER>`）
 - [ ] 在竞赛平台/邮件里补交代码地址
