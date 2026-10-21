@@ -2,15 +2,15 @@
 
 Team **wind** · 第十届全国激光雷达大会 数据处理大赛 · 赛道三（LoD2 建筑物三维重建）
 
-This repository is the complete, self-contained code that generates our competition
-submissions. It is released under **CC BY 4.0** (see `LICENSE`), as required by the
+This repository contains the complete pipeline that produces our final competition
+submission. It is released under **CC BY 4.0** (see `LICENSE`), as required by the
 competition's award conditions.
 
-本仓库是生成参赛提交结果的**完整可复现代码**，按赛事要求以 **CC BY 4.0** 发布。
+本仓库是生成参赛提交结果的完整可复现代码，按赛事要求以 CC BY 4.0 发布。
 
 ---
 
-## 1. What this is / 这是什么
+## 1. Task and result / 任务与结果
 
 **Task.** Given an airborne LiDAR point cloud for each of 4,000 test entries, produce a
 LoD2 building mesh (`<id>.obj`). The leaderboard score is
@@ -20,13 +20,17 @@ FINAL = 0.6 × CD + 0.4 × ECD
 ```
 
 where `CD` is Chamfer distance and `ECD` is Edge Chamfer distance, both computed in the
-**original coordinate frame, in metres** (the organiser's `evaluate.py` has the
-normalisation lines commented out — see `docs/赛道三_方法说明文档.md` §2.1).
+**original coordinate frame, in metres**. The organiser's `evaluate.py` has the
+centroid-removal and scale-normalisation lines commented out; any pipeline that
+normalises coordinates will inflate CD by roughly the tile's diagonal.
 
-**Result.** Best public-leaderboard submission **`v37`**: `FINAL = 3.83416`
-(CD 2.96191 / ECD 5.14252) — a **−25.8 %** improvement over our first valid submission
-(5.16638). The winning operator is the **multi-axis min∪max height shell** (see §2 step 9),
-which lifts `v29` (4.00841) to 3.83416 with **both** CD and ECD decreasing.
+**Result.** `FINAL = 3.56886` (CD 2.59888, ECD 5.02382), against an official baseline of
+9.8437. The submission consists of 4,000 flat `.obj` files in a single zip.
+
+The test tiles are scene tiles, not single buildings. The largest contains 933,386 points
+and spans 626 × 510 × 655 m. Median tile diagonal over the set is 28.8 m, p90 is 104.4 m.
+One pipeline therefore has to handle both compact tiles and whole-block tiles, whose
+optimal parameters differ.
 
 ---
 
@@ -35,38 +39,41 @@ which lifts `v29` (4.00841) to 3.83416 with **both** CD and ECD decreasing.
 ```
 test .xyz (4000)
   │
-  ├─[1] src/prepare.py            .xyz → .ply + geometry report (points / size / density)
+  ├─[1] src/prepare.py              .xyz → .ply + geometry report (count / extent / density)
   │
-  ├─[2] City3D (modified CLI_Example_2)   footprint → segmentation → roof plane extraction
-  │       src/c3run.py            run wrapper (encoding / timeout tree-kill / concurrency)
-  │       src/run_batch.py        end-to-end batch driver
+  ├─[2] City3D (modified CLI_Example_2)   candidate planes → integer-programming face selection
+  │       src/c3run.py              run wrapper (encoding, timeout tree-kill, concurrency)
+  │       src/run_batch.py          batch driver
   │
-  ├─[3] src/fallback.py           pure-geometry fallback (guarantees 100 % coverage)
+  ├─[3] src/fallback.py             pure-geometry fallback (guarantees 100 % coverage)
   │
-  ├─[4] src/postproc.py           metric-oriented post-processing
-  │                               outlier-face removal (CD) · outward normals (NC)
-  │                               principal-axis + right angles (ECD) · coplanar merge (F_Ratio)
+  ├─[4] src/postproc.py             outlier faces (CD) · outward normals (NC) ·
+  │                                 principal-axis orthogonalisation (ECD) · coplanar merge
   │
-  ├─[5] src/qc_repair.py          QC + targeted repair (detect exploded meshes, re-run with
-  │                               an alternate config ladder, keep the better one)
+  ├─[5] src/qc_repair.py            structural QC + targeted repair with an alternate config
   │
-  ├─[6] src/_t_build_walls.py     ★ walls operator (v10 core): add footprint side walls only
-  │                               — no roof, no floor
+  ├─[6] src/_t_build_walls.py       walls: footprint side walls only — no roof, no floor
   │
-  ├─[7] src/_t_apply_clean.py     zero-risk tail cleanup (v12): z-clip fuse + far&sliver removal
+  ├─[7] src/_t_apply_clean.py       tail cleanup: z-clip fuse + far/sliver removal
   │
-  ├─[8] src/_t_dsm_apply.py       ★ gated DSM densification (v21→v28→v29 / v35 / v36)
-  │                               z-projected min∪max height blocks over the input cloud
+  ├─[8] src/_t_dsm_apply.py         gated DSM: grid-sampled z-height field, Delaunay,
+  │                                 long-edge filter, appended as text
   │
-  ├─[9] src/_t_mads_apply.py      ★ multi-axis min∪max height shells (v37, the winning lever)
-  │                               x/y-projected min/max height fields → appends 4 shells,
-  │                               covering the vertical walls that a z-height field misses
+  ├─[9] src/_t_mads_apply.py        multi-axis height fields: x/y min∪max shells, with
+  │                                 grid coarsening on large tiles
   │
-  └─[10] src/package.py           → submission.zip (4000 .obj, flat at archive root)
+  ├─[10] src/_t_creasesplit_apply.py  crease split at dihedral > 30° (topology only)
+  │
+  └─[11] src/package.py             → submission.zip (4000 .obj, flat at archive root)
 ```
 
-`src/_t_build_v9r.py` rebuilds the `v9r` base from the City3D output before the walls/cleanup
-steps; `src/verify_submission.py` is the pre-submission format checker.
+`src/verify_submission.py` is the pre-submission format checker: it verifies entry count,
+that every entry parses, that no mesh is degenerate, and that the bounding-box ratio
+`mesh_diag / cloud_diag` falls in [0.85, 1.20].
+
+Steps 6 to 10 only use the sample's own point cloud and its own mesh. They never read
+ground truth, and they write by appending text or remapping vertex indices, so the input
+geometry is never destroyed — if an operator fails, the result degrades to its input.
 
 ---
 
@@ -79,8 +86,8 @@ Python 3.9
 numpy 2.0.2 / scipy 1.13.1 / trimesh 4.9.0
 ```
 
-City3D must be built separately from its own public source (see below); we use a lightly
-modified CLI so that the parameters below can be passed on the command line.
+City3D must be built from its own public source; we use a lightly modified CLI so that
+the parameters below can be passed on the command line.
 
 ```bash
 pip install numpy scipy trimesh
@@ -90,82 +97,88 @@ pip install numpy scipy trimesh
 
 ```bash
 # [1] preprocess
-python src/prepare.py --src <test_xyz_dir> --out data/work/ply
+python src/prepare.py --src <test_xyz_dir> --dst data/work/ply
 
-# [2] main reconstruction (City3D)
-python src/run_batch.py --ply data/work/ply --out data/work/recon --mode cloud
+# [2]-[5] main reconstruction, fallback, post-processing, QC
+#         run_batch chains these stages; the candidate-face cap goes 600 -> 5000
+python src/run_batch.py --stage all --src <test_xyz_dir> --work data/work \
+       --jobs 8 --max-faces 5000
+#         output lands in data/work/final
 
-# [3][4][5] fallback + postprocess + QC repair
-python src/fallback.py   --recon data/work/recon --ply data/work/ply --out data/work/fb
-python src/postproc.py   --src data/work/fb --out data/work/pp
-python src/qc_repair.py  --src data/work/pp --out data/work/final_v9r
+# [6] walls: side walls only, z0 = p2, z1 = p30 of the cloud inside each footprint
+python src/_t_build_walls.py --mode build --base data/work/final --out data/work/walls \
+       --z0q 2 --z1q 30 --jobs 8
 
-# [6] walls operator (the single operator that is a net gain against ground truth)
-python src/_t_build_walls.py --mode build --base data/work/final_v9r \
-       --out data/work/final_v10 --z0q 2 --z1q 30 --jobs 8
+# [7] tail cleanup
+python src/_t_apply_clean.py --src data/work/walls --dst data/work/clean \
+       --ply data/work/ply --mode far_sliv --sliv 40 --jobs 8
 
-# [7] tail cleanup (optional, near-neutral: see docs)
-python src/_t_apply_clean.py --src data/work/final_v10 --dst data/work/final_v12 \
-       --ply data/work/ply --mode both --sliv 40 --jobs 8
+# [8] gated DSM (3 m grid, long-edge cap = 3g = 9 m, gate at 40 m diagonal)
+python src/_t_dsm_apply.py --meshd data/work/clean --plyd data/work/ply \
+       --outd data/work/dsm --g 3.0 --diag-min 40 --jobs 5
 
-# [8] gated DSM densification  (v21 → v28 → v29; keep max_edge = 3g)
-python src/_t_dsm_apply.py --meshd data/work/final_v20 --plyd data/work/ply \
-       --outd data/work/final_v21 --g 3.0 --diag-min 30 --zmode min --jobs 5
-python src/_t_dsm_apply.py --meshd data/work/final_v21 --plyd data/work/ply \
-       --outd data/work/final_v28 --g 3.0 --zmode max --diag-min 30 --jobs 6
-python src/_t_dsm_apply.py --meshd data/work/final_v28 --plyd data/work/ply \
-       --outd data/work/final_v29 --g 2.0 --zmode mm  --diag-min 30 --jobs 6
+# [9] multi-axis height fields, with grid coarsening above 80 m diagonal
+python src/_t_mads_apply.py --meshd data/work/dsm --plyd data/work/ply \
+       --outd data/work/mads --axes x,y --g 1.5 --diag-min 0 \
+       --g-big 3.0 --diag-split 80 --face-cap 40000 --cell-cap 100000 \
+       --jobs 6 --report logs/apply_mads.json
 
-# [9] multi-axis min∪max wall shells  (v37 = our best submission)
-python src/_t_mads_apply.py --meshd data/work/final_v29 --plyd data/work/ply \
-       --outd data/work/final_v37 --axes x,y --g 2.0 --diag-min 30 \
-       --face-cap 200000 --cell-cap 400000 --jobs 6
+# [10] crease split at 30° (same threshold as the organiser's sharp-edge criterion)
+python src/_t_creasesplit_apply.py --meshd data/work/mads --outd data/work/cs \
+       --crease 30 --jobs 6
 
-# [10] package + verify
-python src/package.py --src data/work/final_v37 --out out/submission_v37_xy.zip
-python src/verify_submission.py --zip out/submission_v37_xy.zip --ply data/work/ply --expect 4000
+# [11] package + verify
+python src/package.py --src data/work/cs --out out/submission.zip
+python src/verify_submission.py --zip out/submission.zip --ply data/work/ply --expect 4000
 ```
 
-`--mode cloud` is important: **no coordinate normalisation** — the score is computed in the
-original metric frame.
+All stages work in the original coordinate frame. `run_batch.py` calls `fallback.py`,
+`postproc.py` and `qc_repair.py` internally; those three are modules, not standalone CLIs.
 
 ### 3.3 What is *not* included
 
-* The organisers' evaluation script `official_evaluate.py` and the BuildingWorld dataset.
-  Both must be obtained from the competition platform. Our own metric code is
-  `src/metrics.py`; place the official script alongside the pipeline if you want to
-  reproduce the ground-truth validation numbers in `docs/`.
+* The organiser's evaluation script and the BuildingWorld dataset — both must be obtained
+  from the competition platform. Our own metric implementation is `src/metrics.py`.
 * The 4,000 test point clouds and the produced meshes.
-* City3D itself (third-party, its own licence).
+* City3D itself (third-party, under its own licence).
 
 ---
 
 ## 4. Method notes / 方法要点
 
-1. **Calibrate the ruler first.** We re-implemented the organiser's metrics and verified
-   that the online score uses the *original* metric coordinate frame. All conclusions
-   obtained earlier under normalised coordinates were discarded and re-derived.
-2. **Decompose CD.** Splitting CD into its two directions showed that the dominant error
-   channel is the *mesh → cloud* direction, which is what the walls operator attacks.
-3. **Ground-truth-free proxies, validated for significance.** `p2m`, `p2m_p90` and `m2p`
-   are computed without ground truth and used as pre-submission gates.
-4. **Two hard rules learned from ground-truth experiments**
-   (see `docs/赛道三_方法说明文档.md` §6):
-   * deleting geometry always improves one CD direction and destroys the other — it is
-     essentially never a net gain;
-   * adding a *closed prism* (walls **plus** roof) is strongly negative, while adding
-     **side walls only** is a net gain. The roof is where the damage happens.
-5. **Multi-axis beats single-axis upsampling.** Refining the z-axis height layers only
-   (1.5 m / 1.0 m) bought −0.015 / −0.091 FINAL; adding **x/y min∪max height shells** (v37)
-   at the same budget bought **−0.174** — about **1.9×** the best z-axis result. The reason is
-   structural: ≈89 % of the ground-truth area is near-vertical wall, which a z-projected height
-   field cannot represent at all. *Spend the budget where the information is missing, not where
-   it is already dense.*
-6. **Known limits.** On scene-scale tiles (a whole city block delivered as one entry) our
-   mesh degenerates into a bounding-box-hugging shell; `ECD` reflects this. The principled
-   fix is to segment the scene into per-building clouds before reconstruction — a
-   structural change we did not have time to complete. This is stated as a limitation in
-   the extended abstract.
+1. **Calibrate the metric before changing the method.** We re-implemented the organiser's
+   metrics and verified, sample by sample, that the online score uses the original metric
+   frame. Everything derived earlier under normalised coordinates was discarded.
+
+2. **The candidate-face cap is a branch switch, not a threshold.** City3D's default of 600
+   is never reached on a single building, but on a scene tile the accumulated candidate
+   planes exceed it and the solver silently falls back to a compromise path that drops the
+   vertical-direction constraint, producing ground-hugging sheets instead of walls. Raising
+   it to 5000 removes the fallback. There is no useful intermediate value.
+
+3. **Add side walls only.** Adding a closed prism (walls plus roof) is negative on every
+   test set we tried, while adding side walls alone is a net gain with CD1 and CD2 both
+   decreasing. The damage comes from the roof: it introduces a large horizontal surface
+   that sits further from the reference than the gap it fills.
+
+4. **Where the reference is dense, that is where to add.** The reference meshes average 871
+   faces against roughly 101 for a typical LoD2 output, and about 89 % of their area is
+   near-vertical. A z-projected height field cannot represent a wall's mid-section at all,
+   which is why x/y-projected fields contribute independently and their gains add.
+
+5. **Gate by scale, not by sample.** DSM gain correlates with cloud diagonal at −0.826
+   (Spearman −0.749); it is near zero on compact tiles and large on scene tiles. The gate
+   at 40 m is what keeps the operator from adding useless faces on small samples.
+
+6. **Keep edges local.** Offline ΔECD does not transfer to the online score at a constant
+   rate — the same offline change has been observed to produce −0.328 and, elsewhere,
+   +0.111. Any change that introduces long edges unrelated to the reference structure is
+   rejected before submission, even if the offline metric improves.
+
+7. **Known limits.** We do not segment scene tiles into per-building clouds, so buildings
+   with small gaps and similar roof heights tend to be merged into one polyhedron. On the
+   60-sample benchmark, the worst 10 % of samples account for 36.0 % of the total FINAL
+   sum, and every operator we tried on that tail was a net loss against ground truth.
 
 `src/_t_ecd_risk.py`, `src/_t_check_ab.py`, `src/_t_walls_cfg.py` and
 `src/_t_walls_cfg_cmp.py` are the diagnostic tools used to reach these conclusions; they
